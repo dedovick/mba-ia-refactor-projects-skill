@@ -60,16 +60,16 @@ As 5 áreas obrigatórias viram um arquivo cada; `validation.md` é extra (a Fas
 - [x] R2. Análise manual dos 3 projetos, com ≥ 5 problemas cada (≥ 1 CRITICAL/HIGH, ≥ 2 MEDIUM, ≥ 2 LOW)
 
 ### Skill
-- [ ] R3. `SKILL.md` com as 3 fases sequenciais
-- [ ] R4. Referência: análise de projeto (linguagem, framework, banco, arquitetura)
-- [ ] R5. Referência: catálogo com ≥ 8 anti-patterns, severidade distribuída e sinais de detecção
-- [ ] R6. Catálogo inclui detecção de APIs deprecated com o equivalente moderno
-- [ ] R7. Referência: template do relatório
-- [ ] R8. Referência: guidelines MVC (Models, Views/Routes, Controllers)
-- [ ] R9. Referência: playbook com ≥ 8 transformações com código antes/depois
-- [ ] R10. Fase 2 pausa e pede confirmação antes de alterar arquivos
-- [ ] R11. Fase 3 valida boot + endpoints
-- [ ] R12. Skill agnóstica: nenhuma referência específica aos 3 projetos
+- [x] R3. `SKILL.md` com as 3 fases sequenciais
+- [x] R4. Referência: análise de projeto (linguagem, framework, banco, arquitetura)
+- [x] R5. Referência: catálogo com ≥ 8 anti-patterns, severidade distribuída e sinais de detecção
+- [x] R6. Catálogo inclui detecção de APIs deprecated com o equivalente moderno
+- [x] R7. Referência: template do relatório
+- [x] R8. Referência: guidelines MVC (Models, Views/Routes, Controllers)
+- [x] R9. Referência: playbook com ≥ 8 transformações com código antes/depois
+- [x] R10. Fase 2 pausa e pede confirmação antes de alterar arquivos
+- [x] R11. Fase 3 valida boot + endpoints
+- [x] R12. Skill agnóstica: nenhuma referência específica aos 3 projetos
 
 ### Execução (para cada projeto: P1 code-smells, P2 ecommerce-legacy, P3 task-manager)
 - [ ] R13. P1: Fase 1 correta · ≥ 5 findings · ≥ 1 CRITICAL/HIGH · app funciona · `reports/audit-project-1.md` · commit
