@@ -1,0 +1,118 @@
+# Plano — Skill `refactor-arch` (Refatoração Arquitetural Automatizada)
+
+Objetivo: criar uma skill do Claude Code que **analisa, audita e refatora para MVC** qualquer projeto, e provar que ela é agnóstica de tecnologia rodando-a em 3 projetos (Flask desorganizado, Express, Flask parcialmente organizado).
+
+Decisões:
+- Ferramenta: **Claude Code** — skill em `.claude/skills/refactor-arch/` (SKILL.md + `references/*.md`)
+- Repositório: https://github.com/dedovick/mba-ia-refactor-projects-skill (`origin`), `upstream` = devfullcycle
+- Quem roda a skill nos 3 projetos: **o Pedro**, numa sessão interativa do Claude Code dentro de cada projeto (a Fase 2 precisa pausar para confirmação humana; as execuções geram os logs/prints do README)
+- Análise manual: [`docs/analise-manual.md`](docs/analise-manual.md) — 24 + 22 + 20 findings
+
+---
+
+## 1. Desenho da skill
+
+### Estrutura
+
+```
+.claude/skills/refactor-arch/
+├── SKILL.md                         # o "prompt": 3 fases, gates, regras de segurança
+└── references/
+    ├── project-analysis.md          # heurísticas: linguagem, framework, banco, arquitetura, endpoints
+    ├── anti-patterns-catalog.md     # ≥ 8 anti-patterns (incl. APIs deprecated): sinais de detecção + severidade
+    ├── report-template.md           # formato fixo do relatório da Fase 2
+    ├── mvc-guidelines.md            # camadas alvo e responsabilidades (por stack)
+    ├── refactoring-playbook.md      # ≥ 8 transformações com código antes/depois (Python e JS)
+    └── validation.md                # como subir a app, smoke test e comparação com a linha de base
+```
+
+As 5 áreas obrigatórias viram um arquivo cada; `validation.md` é extra (a Fase 3 é onde as skills costumam falhar).
+
+### As 3 fases
+
+| Fase | O que faz | Saída | Gate |
+|---|---|---|---|
+| 1 — Análise | Detecta stack, domínio, arquitetura, tabelas e **lista todos os endpoints**; sobe a app e grava a **linha de base** das respostas | Resumo no formato do enunciado | — |
+| 2 — Auditoria | Cruza o código com o catálogo; cada finding com arquivo:linha verificados; ordena CRITICAL → LOW; salva o relatório | Relatório + arquivo `reports/audit-report.md` | **Pausa e pede confirmação**; não altera nenhum arquivo do código antes do "sim" |
+| 3 — Refatoração | Aplica o playbook, gera a estrutura MVC, sobe a app numa porta livre e compara cada endpoint com a linha de base | Nova estrutura + checklist de validação | Só termina com a app subindo e os endpoints respondendo |
+
+### Regras que vêm da análise manual
+
+1. **Contrato da API preservado:** mesmos paths, métodos, campos e status codes. Mudanças só por segurança (tirar senhas/segredos das respostas, proteger rotas admin), sempre listadas no relatório final.
+2. **Linha de base antes de mexer:** as respostas dos endpoints são registradas na Fase 1 e comparadas na Fase 3.
+3. **Porta configurável:** `PORT` via env/config; validação numa porta livre (a 5000 é do AirPlay no macOS).
+4. **Julgar responsabilidades, não pastas:** um projeto com `models/` e `routes/` ainda pode ter rotas gordas, serviços mortos e validação duplicada.
+5. **Adaptar a transformação ao ponto de partida:** monolito → criar camadas; projeto parcialmente organizado → mover lógica para controllers e consolidar.
+6. **Nada de segredos no código:** config em módulo próprio lendo variáveis de ambiente, com `.env.example`.
+
+### Pontos de atenção
+
+- **Plugins globais do Claude Code:** a sua instalação carrega plugins que também sugerem skills (ex.: superpowers). Se atrapalharem a execução, rodar com esses plugins desativados.
+- **Relatório:** a skill salva em `reports/audit-report.md` dentro do projeto; depois copiamos para `reports/audit-project-N.md` na raiz, como pede o enunciado.
+- **Iteração segura:** cada execução começa de um estado commitado. Se uma rodada falhar, voltamos o projeto com `git restore`/`git clean` e ajustamos a skill.
+
+---
+
+## 2. Checklist de requisitos
+
+### Setup
+- [x] R1. Fork público em `dedovick`, remotes `origin`/`upstream`
+- [x] R2. Análise manual dos 3 projetos, com ≥ 5 problemas cada (≥ 1 CRITICAL/HIGH, ≥ 2 MEDIUM, ≥ 2 LOW)
+
+### Skill
+- [ ] R3. `SKILL.md` com as 3 fases sequenciais
+- [ ] R4. Referência: análise de projeto (linguagem, framework, banco, arquitetura)
+- [ ] R5. Referência: catálogo com ≥ 8 anti-patterns, severidade distribuída e sinais de detecção
+- [ ] R6. Catálogo inclui detecção de APIs deprecated com o equivalente moderno
+- [ ] R7. Referência: template do relatório
+- [ ] R8. Referência: guidelines MVC (Models, Views/Routes, Controllers)
+- [ ] R9. Referência: playbook com ≥ 8 transformações com código antes/depois
+- [ ] R10. Fase 2 pausa e pede confirmação antes de alterar arquivos
+- [ ] R11. Fase 3 valida boot + endpoints
+- [ ] R12. Skill agnóstica: nenhuma referência específica aos 3 projetos
+
+### Execução (para cada projeto: P1 code-smells, P2 ecommerce-legacy, P3 task-manager)
+- [ ] R13. P1: Fase 1 correta · ≥ 5 findings · ≥ 1 CRITICAL/HIGH · app funciona · `reports/audit-project-1.md` · commit
+- [ ] R14. P2: skill copiada · mesmas verificações · `reports/audit-project-2.md` · commit
+- [ ] R15. P3: skill copiada · detecta o domínio Task Manager · achados mesmo com camadas · endpoints OK · `reports/audit-project-3.md` · commit
+- [ ] R16. Checklist de validação do enunciado preenchido para os 3
+
+### README
+- [ ] R17. Seção "Análise Manual"
+- [ ] R18. Seção "Construção da Skill" (decisões, catálogo, agnosticismo, desafios)
+- [ ] R19. Seção "Resultados" (findings por severidade, antes/depois, checklists, prints/logs, comportamento por stack)
+- [ ] R20. Seção "Como Executar"
+
+---
+
+## 3. Ondas
+
+**Onda 0 — Setup:** fork e remotes ✓
+
+**Onda 1 — Análise manual:** ✓ [`docs/analise-manual.md`](docs/analise-manual.md)
+
+**Onda 2 — Skill:** escrever `SKILL.md` e as 6 referências no `code-smells-project`. Revisar contra R3–R12.
+
+**Onda 3 — Execução e iteração:**
+1. P1: Pedro roda `/refactor-arch` → revisamos a Fase 1 e o relatório → confirma → revisamos a Fase 3 → ajustes na skill se preciso → commit.
+2. P2: copiar a skill (já ajustada) → rodar → revisar → commit.
+3. P3: idem.
+4. Se um ajuste da skill nascer no P2 ou P3, propagar para as 3 cópias.
+
+**Onda 4 — README e entrega:** 4 seções, checklist item a item, push.
+
+---
+
+## 4. Linha de base (antes da refatoração)
+
+| Projeto | Como sobe | Endpoints | Observações do boot |
+|---|---|---|---|
+| P1 | `python app.py` (porta 5000 fixa) | 19 | Sobe limpo numa porta livre; `/usuarios` devolve senhas; SQLi no login confirmado |
+| P2 | `npm start` (porta 3000 fixa) | 3 | Sobe limpo; checkout OK/recusado conforme `api.http`; `"card": 4111` derruba o processo |
+| P3 | `python seed.py && python app.py` (porta 5000 fixa) | 22 | Sobe com `LegacyAPIWarning` (`Query.get`) e `DeprecationWarning` (`utcnow`); inputs inválidos geram 500 |
+
+## 5. Log de iterações
+
+| # | Data | Projeto | Mudança na skill | Findings (C/H/M/L) | App OK? | Observações |
+|---|---|---|---|---|---|---|
+| | | | | | | |
