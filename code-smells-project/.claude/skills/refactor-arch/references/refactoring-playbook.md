@@ -20,6 +20,8 @@ Use este playbook na **Fase 3**. Cada transformação resolve um ou mais anti-pa
 | T-14 | Logging estruturado no lugar de print/console | AP-20 |
 | T-15 | Proteger endpoints administrativos | AP-06 |
 | T-16 | Composition root (entry point) preservando o comando | AP-05, AP-21 |
+| T-17 | Substituir condicionais em cadeia por dados, despacho ou expressão | AP-25 |
+| T-18 | Reorganizar módulos por domínio (coesão) | AP-26 |
 
 ---
 
@@ -230,14 +232,14 @@ def init_app(app):
 
 **Antes (JavaScript)**
 ```js
-class CheckoutController {
+class SubscriptionController {
   constructor() { this.gateway = new FakeGateway(); this.db = new sqlite3.Database(":memory:"); }
 }
 ```
 
 **Depois (JavaScript)**
 ```js
-class CheckoutController {
+class SubscriptionController {
   constructor({ accountModel, invoiceModel, paymentGateway }) {
     this.accountModel = accountModel;
     this.invoiceModel = invoiceModel;
@@ -245,7 +247,7 @@ class CheckoutController {
   }
 }
 // src/app.js (composition root)
-const controller = new CheckoutController({ accountModel, invoiceModel, paymentGateway });
+const controller = new SubscriptionController({ accountModel, invoiceModel, paymentGateway });
 ```
 
 Caches globais mutáveis: se nada lê o cache, remova-o; se é necessário, transforme em um objeto criado no entry point e injetado.
@@ -359,7 +361,7 @@ def get_item(item_id):
     try:
         ...
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 ```
 
 **Depois (Flask)**
@@ -379,16 +381,16 @@ class NotFoundError(AppError): status = 404
 def register_error_handlers(app):
     @app.errorhandler(AppError)
     def handle_app_error(err):
-        return jsonify({"erro": err.message}), err.status   # mesmas chaves que o projeto já usava
+        return jsonify({"error": err.message}), err.status  # use as MESMAS chaves de erro que o projeto já usava
 
     @app.errorhandler(HTTPException)          # from werkzeug.exceptions import HTTPException
     def handle_http_error(err):               # 404, 405 etc. mantêm o status original
-        return jsonify({"erro": err.description}), err.code
+        return jsonify({"error": err.description}), err.code
 
     @app.errorhandler(Exception)
     def handle_unexpected(err):
         app.logger.exception("Erro inesperado")
-        return jsonify({"erro": "Erro interno do servidor"}), 500
+        return jsonify({"error": "Erro interno do servidor"}), 500
 ```
 
 > Registre um handler para `HTTPException` **antes** de confiar no handler genérico de `Exception`; sem ele, um 405 do próprio framework vira 500.
@@ -444,7 +446,7 @@ async subscribe(input) {
   const plan = await this.planModel.findById(input.planId);
   if (!plan) throw new AppError("Plano não encontrado", 404);
   const approved = await this.paymentGateway.charge(input.card, plan.price);   // decide antes de gravar
-  if (!approved) throw new AppError("Pagamento recusado", 400);
+  if (!approved) throw new AppError("Cobrança recusada", 402);
   return transaction(this.db, async () => {
     const accountId = await this.accountModel.findOrCreate(input);
     const subscriptionId = await this.subscriptionModel.create(accountId, plan.id);
@@ -551,7 +553,7 @@ Remova imports, variáveis e funções sem uso (confirme com busca antes de apag
 print("ENVIANDO EMAIL para " + email)
 ```
 ```js
-console.log("Pedido criado", id);
+console.log("Fatura criada", id);
 ```
 
 **Depois**
@@ -660,3 +662,161 @@ const { createApp } = require("./app");
 })();
 // package.json: "start": "node src/server.js"
 ```
+
+---
+
+## T-17 — Substituir condicionais em cadeia por dados, despacho ou expressão
+
+Escolha a técnica pelo **tipo** de condicional (veja AP-25). Trocar `if/elif` por `switch` só ajuda no caso "b".
+
+### T-17a — Faixas → tabela de dados
+
+**Antes**
+```python
+fee = 0
+if amount > 10000:
+    fee = amount * 0.01
+elif amount > 5000:
+    fee = amount * 0.02
+elif amount > 1000:
+    fee = amount * 0.03
+```
+
+**Depois**
+```python
+FEE_TIERS = ((10_000, 0.01), (5_000, 0.02), (1_000, 0.03))   # (limite exclusivo, taxa), do maior para o menor
+
+def fee_for(amount):
+    return next((amount * rate for limit, rate in FEE_TIERS if amount > limit), 0)
+```
+```js
+const FEE_TIERS = [[10_000, 0.01], [5_000, 0.02], [1_000, 0.03]];
+const feeFor = (amount) => {
+  const tier = FEE_TIERS.find(([limit]) => amount > limit);
+  return tier ? amount * tier[1] : 0;
+};
+```
+Preserve exatamente os limites (`>` × `>=`) e a ordem de avaliação do código original.
+
+### T-17b — Valor → ação: tabela de despacho, `match`/`switch` ou Strategy
+
+**Antes**
+```python
+if new_state == "approved":
+    notify_approval(ticket_id)
+if new_state == "rejected":
+    notify_rejection(ticket_id)
+if new_state == "escalated":
+    page_on_call(ticket_id)
+```
+
+**Depois — tabela de despacho (preferida quando cada caso é uma chamada)**
+```python
+ON_STATE_CHANGE = {
+    "approved": notify_approval,
+    "rejected": notify_rejection,
+    "escalated": page_on_call,
+}
+
+if handler := ON_STATE_CHANGE.get(new_state):
+    handler(ticket_id)
+```
+
+**Depois — `match` (Python ≥ 3.10) / `switch` (JS), quando os casos têm lógica diferente entre si**
+```python
+match new_state:
+    case "approved":
+        notify_approval(ticket_id)
+    case "rejected" | "escalated":
+        notify_team(ticket_id, new_state)
+    case _:
+        pass
+```
+```js
+switch (newState) {
+  case "approved": notifyApproval(ticketId); break;
+  case "rejected":
+  case "escalated": notifyTeam(ticketId, newState); break;
+  default: break;
+}
+```
+Use `match` só se a versão mínima de Python do projeto for 3.10 ou superior. Quando cada caso cresce (várias etapas, dependências próprias), promova para Strategy: uma classe ou função por caso, registrada no mesmo dicionário.
+
+### T-17c — `if` aninhado retornando booleano → expressão ou guard clauses
+
+**Antes**
+```python
+def is_expired(self):
+    if self.expires_at:
+        if self.expires_at < now():
+            if self.state != "closed" and self.state != "archived":
+                return True
+            else:
+                return False
+        else:
+            return False
+    else:
+        return False
+```
+
+**Depois**
+```python
+FINAL_STATES = frozenset({"closed", "archived"})
+
+def is_expired(self, reference=None):
+    reference = reference or now()
+    return bool(self.expires_at) and self.expires_at < reference and self.state not in FINAL_STATES
+```
+
+Quando a condição tem efeitos ou mensagens diferentes por ramo, use guard clauses (retorno antecipado) em vez de aninhar:
+```python
+def cancel(ticket):
+    if ticket is None:
+        raise NotFoundError("Chamado não encontrado")
+    if ticket.state in FINAL_STATES:
+        raise ValidationError("Chamado já encerrado")
+    ticket.state = "cancelled"
+```
+
+Se a mesma regra aparece em vários lugares, crie **um** método (no model ou no service) e substitua todas as cópias por chamadas a ele.
+
+---
+
+## T-18 — Reorganizar módulos por domínio (coesão)
+
+**Antes**
+```
+handlers/
+├── account_handlers.py
+└── analytics_handlers.py # métricas + CRUD completo de "labels" (outro domínio)
+common/
+└── misc.py               # valida e-mail, formata data, calcula juros, constantes de status
+```
+
+**Depois**
+```
+views/
+├── account_routes.py
+├── analytics_routes.py   # só métricas
+└── label_routes.py       # CRUD de labels no módulo do seu domínio
+controllers/
+├── analytics_controller.py
+└── label_controller.py
+models/
+└── constants.py          # status e limites do domínio
+controllers/validators.py # validações de entrada reutilizadas
+```
+
+Passos:
+1. Para cada arquivo, liste as entidades e os paths de rota que ele manipula. Tudo o que não pertence ao domínio do nome do arquivo é candidato a mudar de lugar.
+2. Mova cada recurso para o módulo do seu domínio **sem mudar o path das rotas** (o contrato não muda por causa da organização interna).
+3. Quebre `utils`/`helpers` genéricos por assunto: validação → `validators`, formatação de resposta → `views/presenters`, regras de negócio → `controllers`/`services`, constantes → `constants` do domínio. O que não é usado em lugar nenhum é removido (T-13).
+4. Atualize os imports e o registro de rotas (blueprints/routers) no entry point.
+
+```python
+# src/app.py — o registro deixa explícito cada domínio
+app.register_blueprint(account_routes.bp)
+app.register_blueprint(analytics_routes.bp)
+app.register_blueprint(label_routes.bp)    # antes escondido dentro de analytics_handlers
+```
+

@@ -115,4 +115,5 @@ As 5 áreas obrigatórias viram um arquivo cada; `validation.md` é extra (a Fas
 
 | # | Data | Projeto | Mudança na skill | Findings (C/H/M/L) | App OK? | Observações |
 |---|---|---|---|---|---|---|
-| | | | | | | |
+| 1 | 2026-09-26 | P1 | v1 (24 APs, 16 Ts) | 20 (6/5/6/3) | Sim — boot OK, mudanças só de segurança | Interrompida na Fase 3 pelo Pedro para incluir melhorias. Artefatos em `docs/iteracoes/p1-execucao-1/`. Estrutura seguiu `views/`. |
+| — | 2026-09-26 | — | v2: +AP-25 (condicionais em cadeia), +AP-26 (coesão de módulos), +T-17, +T-18; tabela de falsos positivos; exemplos ✅/❌ das regras; exemplos 100% fictícios | — | — | Sugestões do Pedro: `if` sequenciais e organização de módulos; exemplos genéricos para testar generalização |

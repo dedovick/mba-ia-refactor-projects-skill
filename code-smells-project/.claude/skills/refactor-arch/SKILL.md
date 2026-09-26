@@ -32,6 +32,20 @@ Leia cada arquivo **no momento em que a fase indicada começar** (não antes):
 5. **Nunca afirme que algo funciona sem ter executado.** O checklist final só marca ✓ o que foi de fato verificado nesta sessão; o resto aparece como ✗ com o motivo.
 6. **Agnóstico de tecnologia.** Use as heurísticas das referências para identificar a stack. Não assuma um framework pelo nome da pasta ou do projeto.
 
+### Exemplos das regras
+
+| Regra | ✅ Faça | ❌ Não faça |
+|---|---|---|
+| 1. Nada muda antes do "sim" | Na linha de base, trocar a porta fixa **numa cópia em `/tmp`** para conseguir subir a app | Editar o arquivo de config do projeto "só para testar" durante a Fase 1 |
+| 1. Nada muda antes do "sim" | Parar depois da pergunta da Fase 2 e esperar a resposta | Perguntar e, na mesma resposta, já começar a refatorar |
+| 2. Evidência | `File: src/orders.py:42-47`, depois de abrir o arquivo e ver as linhas | `File: src/orders.py` (sem linha) ou uma linha estimada sem conferir |
+| 2. Evidência | Registrar um finding a menos quando não achou a linha | Completar a lista com problemas genéricos ("falta de testes", "código poderia ser melhor") |
+| 3. Contrato da API | Manter `POST /api/items` com os mesmos campos de entrada e as mesmas chaves de resposta, mesmo que os nomes sejam ruins | "Corrigir" `qty`/`desc` para `quantity`/`description` no JSON: isso quebra os clientes |
+| 3. Contrato da API | Remover o campo de senha da resposta e listar em "Contract changes" | Remover o campo em silêncio, ou manter o campo "para não mudar o contrato" |
+| 4. Comando de execução | Continuar subindo com `npm start`, atualizando o caminho em `scripts.start` | Passar a exigir `node src/server.js` ou um comando novo não documentado |
+| 5. Só afirmar o que executou | `✗ All endpoints respond correctly (2 regressões: GET /x → 500)` | `✓` em tudo sem ter rodado as requisições |
+| 6. Agnóstico | Detectar Express por `require('express')` e `app.get(...)` no código | Supor Express porque o projeto tem `package.json`, ou Flask porque tem `app.py` |
+
 ---
 
 ## Fase 1 — Análise do projeto
@@ -72,7 +86,7 @@ Siga direto para a Fase 2.
 Leia `references/anti-patterns-catalog.md` e `references/report-template.md`.
 
 1. Percorra o catálogo **inteiro**, anti-pattern por anti-pattern, aplicando os sinais de detecção em todos os arquivos-fonte. Inclua a seção de **APIs deprecated**: compare o que o código usa com as versões instaladas e indique o equivalente moderno.
-2. Para cada ocorrência, confirme arquivo e linha(s) no código. Agrupe ocorrências do mesmo problema num único finding, listando todas as linhas.
+2. Para cada ocorrência, confirme arquivo e linha(s) no código e compare com a tabela **"Falsos positivos comuns"** do catálogo: se o trecho se encaixa na coluna "Não é finding", descarte. Agrupe ocorrências do mesmo problema num único finding, listando todas as linhas.
 3. Classifique a severidade conforme o catálogo. Use o contexto para subir ou descer um nível quando o catálogo indicar (ex.: endpoint administrativo sem autenticação que executa SQL é CRITICAL, não HIGH).
 4. Não invente findings para bater uma cota. Em compensação, **não pare no óbvio**: um projeto já dividido em pastas ainda pode ter rotas gordas, camadas mortas, validação duplicada e APIs deprecated.
 5. Gere o relatório **exatamente** no formato de `references/report-template.md`, com os findings ordenados de CRITICAL a LOW.

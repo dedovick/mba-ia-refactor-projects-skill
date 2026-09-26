@@ -85,9 +85,9 @@ Run command: <comando> | Port used: <porta> | Boot: OK | Warnings: <lista ou "ne
 
 | # | Request | Status | Response shape |
 |---|---|---|---|
-| 1 | GET /recurso | 200 | {dados: [id, nome, ...], sucesso} |
-| 2 | GET /recurso/999 | 404 | {erro} |
-| 3 | POST /recurso {"nome": "x"} | 201 | {dados: {id}, mensagem} |
+| 1 | GET /items | 200 | {items: [id, title, ...], count} |
+| 2 | GET /items/999 | 404 | {error} |
+| 3 | POST /items {"title": "x"} | 201 | {item: {id, title}} |
 ```
 
 ## 6. Encerrar

@@ -36,9 +36,11 @@ Use este catálogo na **Fase 2**. Percorra **todos** os itens, em ordem, em todo
 | AP-19 | Uso de API deprecated ou legada | MEDIUM | T-12 |
 | AP-20 | Logging com print / console e sem níveis | MEDIUM | T-14 |
 | AP-21 | Middleware ou configuração HTTP inadequada (CORS aberto, sem limites) | MEDIUM | T-01 / T-16 |
+| AP-26 | Baixa coesão de módulos (recurso no módulo errado, `utils` genérico) | MEDIUM | T-18 |
 | AP-22 | Magic numbers e strings | LOW | T-13 |
 | AP-23 | Nomes ruins | LOW | T-13 |
 | AP-24 | Imports, variáveis e funções não usados | LOW | T-13 |
+| AP-25 | Condicionais em cadeia ou aninhadas | LOW | T-17 |
 
 ---
 
@@ -249,6 +251,17 @@ Compare o código com a versão instalada das dependências. Rode a aplicação 
 
 **Por que importa:** superfície de ataque maior e aplicação que se comporta diferente conforme de onde é executada.
 
+
+### AP-26 — Baixa coesão de módulos
+**Sinais de detecção**
+- Um recurso implementado no módulo de outro domínio (ex.: CRUD de uma entidade dentro do arquivo de rotas de relatórios ou de outra entidade). Compare o path das rotas e as entidades manipuladas com o nome do arquivo.
+- Arquivos `utils`, `helpers`, `common` ou `misc` que misturam assuntos sem relação (validação de e-mail, formatação de data, cálculo de negócio, constantes de domínio).
+- Um arquivo que atende vários domínios sem que isso seja o papel dele (não confundir com o entry point, que monta tudo por definição).
+- Constantes ou regras de um domínio definidas num módulo de outro domínio.
+
+**Ajuste:** LOW quando é um único item pequeno fora do lugar; MEDIUM quando obriga a procurar um domínio em vários arquivos.
+**Por que importa:** o código de um assunto fica espalhado, ninguém sabe onde procurar nem onde adicionar algo novo, e mudanças num domínio mexem em arquivos de outros.
+
 ---
 
 ## LOW
@@ -264,6 +277,52 @@ Compare o código com a versão instalada das dependências. Rode a aplicação 
 ### AP-24 — Imports, variáveis e funções não usados
 **Sinais de detecção:** imports sem uso, parâmetros ignorados, variáveis exportadas nunca lidas, funções utilitárias sem chamadas.
 **Por que importa:** ruído que confunde sobre o que o código realmente faz.
+
+
+### AP-25 — Condicionais em cadeia ou aninhadas
+Nem toda sequência de `if` é problema. Classifique o padrão antes de registrar:
+
+| Padrão encontrado | É problema? | Correção |
+|---|---|---|
+| `if/elif` comparando **faixas** de um mesmo valor (`> 10000`, `> 5000`...) | Sim: a regra está codificada como fluxo em vez de dado | Tabela de faixas (T-17a) |
+| `if/elif` ou `if` repetidos comparando **um mesmo valor com constantes** para escolher uma ação (`status == "a"` → faz X; `== "b"` → faz Y) | Sim, a partir de 3 ramos ou quando a mesma cadeia aparece em mais de um lugar | Tabela de despacho, `match`/`switch` ou Strategy (T-17b) |
+| `if` aninhado em 3+ níveis, ou `if cond: return True else: return False` | Sim | Expressão booleana direta ou guard clauses (T-17c) |
+| Sequência de validações com retorno antecipado (`if not x: return erro`) | **Não**: guard clauses são boa prática | Só é finding se estiver duplicada (AP-18) ou presa ao HTTP (AP-08) |
+
+**Ajuste:** MEDIUM quando a mesma cadeia de decisão se repete em vários lugares.
+**Por que importa:** a regra fica escondida no fluxo; adicionar um caso novo exige editar a lógica em vez de acrescentar um dado, e cadeias copiadas divergem.
+
+---
+
+## Falsos positivos comuns (não registre)
+
+Antes de registrar um finding, confira se o trecho não é um destes casos. Um relatório com falsos positivos perde credibilidade e gera refatorações desnecessárias.
+
+| ID | ✅ É finding | ❌ Não é finding |
+|---|---|---|
+| AP-01 | `API_TOKEN = "tk_9f8e7d6c"` no código | `API_TOKEN = os.environ.get("API_TOKEN", "")`; defaults evidentemente de desenvolvimento (`"dev-only-change-me"`); valores em testes/fixtures |
+| AP-02 | `f"SELECT * FROM books WHERE title = '{title}'"` | `f"SELECT * FROM {TABLE} WHERE id = ?"` com `TABLE` constante e valores via placeholder; query builders do ORM (`select(Book).where(Book.title == title)`) |
+| AP-03 | `return {"id": u.id, "hash": u.password_hash}` na resposta | Receber `password` no corpo de um cadastro; ler o hash dentro do model para verificar o login |
+| AP-04 | `hashlib.sha256(pwd.encode()).hexdigest()` para guardar senha | `sha256` para checksum de arquivo, ETag ou chave de cache |
+| AP-05 | `library.py` com conexão, `CREATE TABLE`, rotas e cálculo de multa | O entry point/composition root que importa e registra todas as camadas: esse é o papel dele |
+| AP-06 | `DELETE /admin/purge` sem nenhuma verificação | `GET /health` ou `GET /` públicos sem dados sensíveis |
+| AP-07 | `app.run(debug=True, host="0.0.0.0")` fixo | `debug=settings.DEBUG` lido do ambiente com padrão `False` |
+| AP-08 | Handler de 40 linhas com SQL, cálculo de multa e montagem do JSON | Handler de 5 linhas que lê o body, chama o controller e devolve o resultado |
+| AP-10 | `cache = {}` de módulo mutado por várias funções; `global conn` | Constantes de módulo (`MAX_ITEMS = 50`); extensões criadas uma vez e inicializadas na app (`db = SQLAlchemy()`, `logger = logging.getLogger(__name__)`) |
+| AP-11 | `self.mailer = smtplib.SMTP("smtp.x.com")` dentro do service | O composition root instanciando as dependências e passando para os construtores |
+| AP-13 | `db.get(sql, (err, row) => { db.run(..., () => { db.run(...) }) })` com `err` ignorado | Um único callback que trata `err`; `async/await` com `try/catch` ou repasse ao error handler |
+| AP-14 | `services/mailer.py` que nenhum arquivo importa | Um `__init__.py` que só reexporta nomes; código chamado apenas pelo seed ou por scripts do projeto |
+| AP-15 | `for loan in loans: db.execute("SELECT * FROM books WHERE id = ?", (loan.book_id,))` | Loop sobre uma lista que já está em memória, sem nova query por item |
+| AP-16 | `except: pass`; `except Exception as e: return str(e), 500` em cada handler | Um `try` que captura uma exceção **específica** e a converte em erro de domínio (`except ValueError: raise ValidationError(...)`) |
+| AP-17 | `data["due"]` usado sem checar presença nem formato | Campo opcional com default explícito e validado (`data.get("page", 1)` seguido de checagem de tipo) |
+| AP-18 | Dois blocos de 15 linhas idênticos, exceto pelo `WHERE` | Duas funções parecidas com regras de negócio realmente diferentes |
+| AP-19 | `Book.query.get(1)` com SQLAlchemy 2.x instalado | API que só é deprecated numa versão **mais nova** do que a instalada: mencione como recomendação, sem severidade alta |
+| AP-20 | `print("cobrando", card)` no fluxo de uma requisição | `print` num script de linha de comando (seed, migração) que existe para mostrar progresso |
+| AP-22 | `if score > 73:` sem explicação; `status == 3` significando "arquivado" | `0`, `1`, `-1`, `""`, `[]`; status HTTP (`404`) no ponto em que a resposta é montada |
+| AP-23 | `def calc(a, b, c2):` num service de faturamento | `i`, `j` em laços curtos; `e`/`err` em blocos de exceção; `db`, `app`, `req`, `res` por convenção do framework |
+| AP-24 | `import json` nunca usado | Imports usados só em anotações de tipo; efeitos colaterais intencionais documentados (registro de models num `__init__`) |
+| AP-25 | `if tier == "gold": ... elif tier == "silver": ... elif tier == "bronze": ...` com ações diferentes | Guard clauses de validação com retorno antecipado |
+| AP-26 | `analytics_handlers.py` com CRUD completo de `labels` | Um módulo de rotas por domínio registrado no entry point |
 
 ---
 
