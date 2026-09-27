@@ -72,8 +72,8 @@ As 5 áreas obrigatórias viram um arquivo cada; `validation.md` é extra (a Fas
 - [x] R12. Skill agnóstica: nenhuma referência específica aos 3 projetos
 
 ### Execução (para cada projeto: P1 code-smells, P2 ecommerce-legacy, P3 task-manager)
-- [ ] R13. P1: Fase 1 correta · ≥ 5 findings · ≥ 1 CRITICAL/HIGH · app funciona · `reports/audit-project-1.md` · commit
-- [ ] R14. P2: skill copiada · mesmas verificações · `reports/audit-project-2.md` · commit
+- [x] R13. P1: Fase 1 correta · ≥ 5 findings · ≥ 1 CRITICAL/HIGH · app funciona · `reports/audit-project-1.md` · commit
+- [x] R14. P2: skill copiada · mesmas verificações · `reports/audit-project-2.md` · commit
 - [ ] R15. P3: skill copiada · detecta o domínio Task Manager · achados mesmo com camadas · endpoints OK · `reports/audit-project-3.md` · commit
 - [ ] R16. Checklist de validação do enunciado preenchido para os 3
 
@@ -117,3 +117,5 @@ As 5 áreas obrigatórias viram um arquivo cada; `validation.md` é extra (a Fas
 |---|---|---|---|---|---|---|
 | 1 | 2026-09-26 | P1 | v1 (24 APs, 16 Ts) | 20 (6/5/6/3) | Sim — boot OK, mudanças só de segurança | Interrompida na Fase 3 pelo Pedro para incluir melhorias. Artefatos em `docs/iteracoes/p1-execucao-1/`. Estrutura seguiu `views/`. |
 | — | 2026-09-26 | — | v2: +AP-25 (condicionais em cadeia), +AP-26 (coesão de módulos), +T-17, +T-18; tabela de falsos positivos; exemplos ✅/❌ das regras; exemplos 100% fictícios | — | — | Sugestões do Pedro: `if` sequenciais e organização de módulos; exemplos genéricos para testar generalização |
+| 2 | 2026-09-26 | P1 | `skill-v2` | 23 (6/6/7/4) | Sim — 35/35 iguais à linha de base; validação independente: SQLi no login bloqueado, senha fora das respostas, /admin com token, quantidade negativa → 400 | Commit `3366ae4`. AP-25 e AP-26 detectados. |
+| 3 | 2026-09-27 | P2 | `skill-v2` | 20 (6/4/7/3) | Sim — contrato do `api.http` idêntico; `card` numérico → 400 (antes derrubava); cartão mascarado no log; admin com token; `sqlite3` → `node:sqlite` | **Falhou em detectar** o checkout com e-mail existente e senha errada (continua 200). Motiva a v3. |
