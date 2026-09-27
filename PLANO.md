@@ -78,10 +78,10 @@ As 5 áreas obrigatórias viram um arquivo cada; `validation.md` é extra (a Fas
 - [x] R16. Checklist de validação do enunciado preenchido para os 3
 
 ### README
-- [ ] R17. Seção "Análise Manual"
-- [ ] R18. Seção "Construção da Skill" (decisões, catálogo, agnosticismo, desafios)
-- [ ] R19. Seção "Resultados" (findings por severidade, antes/depois, checklists, prints/logs, comportamento por stack)
-- [ ] R20. Seção "Como Executar"
+- [x] R17. Seção "Análise Manual"
+- [x] R18. Seção "Construção da Skill" (decisões, catálogo, agnosticismo, desafios)
+- [x] R19. Seção "Resultados" (findings por severidade, antes/depois, checklists, prints/logs, comportamento por stack)
+- [x] R20. Seção "Como Executar"
 
 ---
 
