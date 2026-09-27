@@ -72,10 +72,10 @@ As 5 áreas obrigatórias viram um arquivo cada; `validation.md` é extra (a Fas
 - [x] R12. Skill agnóstica: nenhuma referência específica aos 3 projetos
 
 ### Execução (para cada projeto: P1 code-smells, P2 ecommerce-legacy, P3 task-manager)
-- [ ] R13. P1: Fase 1 correta · ≥ 5 findings · ≥ 1 CRITICAL/HIGH · app funciona · `reports/audit-project-1.md` · commit
-- [ ] R14. P2: skill copiada · mesmas verificações · `reports/audit-project-2.md` · commit
-- [ ] R15. P3: skill copiada · detecta o domínio Task Manager · achados mesmo com camadas · endpoints OK · `reports/audit-project-3.md` · commit
-- [ ] R16. Checklist de validação do enunciado preenchido para os 3
+- [x] R13. P1: Fase 1 correta · ≥ 5 findings · ≥ 1 CRITICAL/HIGH · app funciona · `reports/audit-project-1.md` · commit
+- [x] R14. P2: skill copiada · mesmas verificações · `reports/audit-project-2.md` · commit
+- [x] R15. P3: skill copiada · detecta o domínio Task Manager · achados mesmo com camadas · endpoints OK · `reports/audit-project-3.md` · commit
+- [x] R16. Checklist de validação do enunciado preenchido para os 3
 
 ### README
 - [ ] R17. Seção "Análise Manual"
@@ -121,3 +121,6 @@ As 5 áreas obrigatórias viram um arquivo cada; `validation.md` é extra (a Fas
 | 3 | 2026-09-27 | P2 | `skill-v2` | 20 (6/4/7/3) | Sim — contrato do `api.http` idêntico; `card` numérico → 400 (antes derrubava); cartão mascarado no log; admin com token; `sqlite3` → `node:sqlite` | **Falhou em detectar** o checkout com e-mail existente e senha errada (continua 200). Motiva a v3. |
 | — | 2026-09-27 | — | `skill-v3`: sondas de segurança/robustez antes e depois; Fase 2 cruza a linha de base e as sondas com os findings (`Evidence:`); sinal de identidade não verificada no AP-06 + correção no playbook; comparação de listas sem depender da ordem; status que mentem como exceção de contrato; nomes de pastas das guidelines no relatório | — | — | Motivado pelo P2: finding de identidade não detectado e, por isso, não corrigido. Propagada para as 3 cópias. |
 | — | 2026-09-27 | P1, P2 | — | — | — | P1 e P2 restaurados ao código original para reexecução com `skill-v3` (checagem de regressão). Resultados da v2 guardados em `docs/iteracoes/p{1,2}-skill-v2/` e nos commits `3366ae4` e `b335106`. |
+| 4 | 2026-09-27 | P1 | `skill-v3` | 27 (8/8/7/4) | Sim — sondas 23/27 vulneráveis antes, bloqueadas depois; validação independente OK | Sem regressão vs v2; +pedido em nome de outro usuário, +status que mente |
+| 5 | 2026-09-27 | P2 | `skill-v3` | 22 (7/5/6/4) | Sim — checkout com senha errada → 401; recusado não grava usuário; 404 no DELETE inexistente | **Corrige o caso que motivou a v3** |
+| 6 | 2026-09-27 | P3 | `skill-v3` | 19 (5/3/7/4) | Sim — 43/43; tipos → 400; token assinado; sem warnings deprecated | Detecta camada morta, duplicação, coesão e deprecated num projeto já em camadas |
