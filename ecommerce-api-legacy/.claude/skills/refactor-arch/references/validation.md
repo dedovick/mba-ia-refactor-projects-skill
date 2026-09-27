@@ -90,6 +90,40 @@ Run command: <comando> | Port used: <porta> | Boot: OK | Warnings: <lista ou "ne
 | 3 | POST /items {"title": "x"} | 201 | {item: {id, title}} |
 ```
 
+## 5b. Sondas de segurança e robustez
+
+Além das requisições "normais", monte **sondas**: requisições feitas para provocar os problemas que a leitura do código sugere. Elas medem o comportamento real, não o que o código parece fazer, e são repetidas na Fase 3 para provar que cada problema foi corrigido.
+
+Monte as sondas a partir dos endpoints e do código. Cubra todas as categorias que se aplicam:
+
+| Categoria | Sonda (exemplos genéricos) | Comportamento seguro esperado |
+|---|---|---|
+| Identidade | Executar uma ação em nome de uma conta **existente** informando a credencial errada ou nenhuma (ex.: o fluxo aceita um e-mail já cadastrado com outra senha) | 401/403; nenhuma ação executada na conta |
+| Autenticação | Login com payload de injeção no identificador (`x' --`, `' OR '1'='1`) | 401, sem autenticar |
+| Autorização | Rotas administrativas ou destrutivas sem credencial | 401/403 |
+| Injeção | Apóstrofo e payloads SQL em campos de texto e query params | Resposta normal (dado gravado/lido literalmente) ou 400; nunca 500 nem dados extras |
+| Tipos | Tipo trocado (número no lugar de texto e vice-versa), body nulo/ausente, lista vazia, valores negativos ou zero onde não fazem sentido | 400 com mensagem clara; o processo continua de pé |
+| Inexistentes | Atualizar/remover um id que não existe | 404 (registre se responde sucesso sem ter feito nada) |
+| Consistência | Fluxo que falha no meio (ex.: etapa recusada) e consulta seguinte ao estado | Nada gravado pela operação que falhou |
+| Exposição | Campos sensíveis nas respostas (senha, hash, token, segredos de config); segredos ou dados de cartão no log do servidor (`grep` no `server.log`) | Ausentes |
+
+Regras:
+- Sondas destrutivas vão por último e sempre na cópia temporária.
+- Depois de cada sonda que derruba o processo, registre o fato e suba a aplicação de novo.
+- Registre o veredito de cada sonda: **VULNERÁVEL** (comportamento inseguro observado) ou **OK**.
+
+Acrescente a tabela ao `reports/baseline-endpoints.md`:
+
+```markdown
+## Probes
+
+| # | Categoria | Request | Observado | Esperado | Veredito |
+|---|---|---|---|---|---|
+| P1 | Identidade | POST /api/orders {"email": "<existente>", "password": "errada", ...} | 200, pedido criado na conta existente | 401 | VULNERÁVEL |
+| P2 | Tipos | POST /api/orders {"amount": "abc"} | processo caiu (TypeError) | 400 | VULNERÁVEL |
+| P3 | Autorização | DELETE /admin/cache (sem token) | 401 | 401 | OK |
+```
+
 ## 6. Encerrar
 
 ```bash
@@ -110,11 +144,12 @@ Apague `$WORK` ao final da fase (a linha de base já está salva em `reports/`).
 
 | Resultado | Critério |
 |---|---|
-| ✓ Igual | Mesmo status e mesmas chaves de resposta |
+| ✓ Igual | Mesmo status e mesmas chaves de resposta. Listas são comparadas pelo formato dos itens e pelo conteúdo, **não pela posição**; se a ordem era não determinística antes e ficou estável depois, é correção |
 | ✓ Mudança esperada | Diferença causada por uma correção de segurança listada em "Contract changes" (ex.: campo `password` removido, rota admin agora exige token → 401 sem token e o status original com token) |
 | ✓ Correção de bug | Antes era 500 ou derrubava o processo; agora é 4xx com mensagem clara |
 | ✗ Regressão | Qualquer outra diferença de status ou de formato — corrija antes de concluir |
 
-5. Faça uma varredura rápida do catálogo nos arquivos novos (segredos, SQL concatenado, `except:` vazio, senha em resposta) para confirmar que os CRITICAL e HIGH foram resolvidos.
-6. Salve o resultado em `reports/validation-results.md`: comando e porta usados, trecho do log de boot, tabela antes × depois com o veredito de cada linha e a lista de problemas não resolvidos.
-7. Encerre o processo, libere a porta e apague a cópia temporária.
+5. **Repita todas as sondas** da seção 5b. Cada sonda VULNERÁVEL na linha de base precisa estar OK agora. Uma sonda que continua VULNERÁVEL é uma pendência bloqueante: volte à refatoração e corrija (até 3 ciclos). Só aceite deixá-la vulnerável se a correção exigir uma decisão de produto fora do escopo; nesse caso, registre-a em "Unresolved" com o motivo.
+6. Faça uma varredura rápida do catálogo nos arquivos novos (segredos, SQL concatenado, `except:` vazio, senha em resposta) para confirmar que os CRITICAL e HIGH foram resolvidos.
+7. Salve o resultado em `reports/validation-results.md`: comando e porta usados, trecho do log de boot, tabela antes × depois com o veredito de cada linha, **tabela de sondas antes → depois** e a lista de problemas não resolvidos.
+8. Encerre o processo, libere a porta e apague a cópia temporária.

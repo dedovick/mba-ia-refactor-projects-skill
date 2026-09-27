@@ -27,7 +27,7 @@ Leia cada arquivo **no momento em que a fase indicada começar** (não antes):
 
 1. **Nada muda antes do "sim".** Nas Fases 1 e 2, os únicos arquivos que você pode criar dentro do projeto ficam em `reports/` (linha de base e relatório). Qualquer outra escrita (código, config, dependências, banco) só acontece na Fase 3, depois da confirmação explícita.
 2. **Evidência, não suposição.** Todo finding cita arquivo e linha(s) que você **conferiu** no código (com leitura do arquivo ou busca com número de linha). Se não conseguiu localizar a linha, o finding não entra.
-3. **O contrato da API é sagrado.** Paths, métodos HTTP, nomes de campos de entrada e saída e status codes permanecem iguais. As únicas exceções são correções de segurança (ex.: parar de devolver senhas ou segredos, exigir autorização em rota administrativa), e cada uma precisa aparecer na seção "Contract changes" do resumo final.
+3. **O contrato da API é sagrado.** Paths, métodos HTTP, nomes de campos de entrada e saída e status codes permanecem iguais. As únicas exceções são (a) correções de segurança (ex.: parar de devolver senhas ou segredos, exigir autorização em rota administrativa, recusar uma ação feita com credencial inválida) e (b) status que mentem (ex.: sucesso para uma remoção que não removeu nada → 404). Cada exceção precisa aparecer na seção "Contract changes" do resumo final.
 4. **O comando de execução é preservado.** Se o projeto sobe com `python app.py` ou `npm start`, ele continua subindo com o mesmo comando depois da refatoração.
 5. **Nunca afirme que algo funciona sem ter executado.** O checklist final só marca ✓ o que foi de fato verificado nesta sessão; o resto aparece como ✗ com o motivo.
 6. **Agnóstico de tecnologia.** Use as heurísticas das referências para identificar a stack. Não assuma um framework pelo nome da pasta ou do projeto.
@@ -56,7 +56,7 @@ Leia `references/project-analysis.md` e `references/validation.md` (seção "Lin
 2. Detecte linguagem, framework (com versão, a partir do manifesto de dependências), dependências relevantes, banco de dados e tabelas.
 3. Classifique a arquitetura atual (monolítica, parcialmente em camadas ou em camadas) e descreva o domínio da aplicação a partir das tabelas, rotas e nomes de entidades.
 4. Liste **todos** os endpoints (método, path, handler com arquivo:linha).
-5. Grave a **linha de base**: siga `references/validation.md` para subir a aplicação numa cópia temporária, fora do projeto, e registrar o status e o formato de resposta de cada endpoint em `reports/baseline-endpoints.md`. Se não for possível subir, registre o motivo e continue; a validação da Fase 3 vai usar só a análise estática.
+5. Grave a **linha de base**: siga `references/validation.md` para subir a aplicação numa cópia temporária, fora do projeto, e registrar o status e o formato de resposta de cada endpoint em `reports/baseline-endpoints.md`. Na mesma subida, execute as **sondas de segurança e robustez** (seção 5b de `validation.md`) montadas a partir do que você leu no código, e registre o veredito de cada uma. Se não for possível subir, registre o motivo e continue; a validação da Fase 3 vai usar só a análise estática.
 6. Imprima o resumo exatamente neste formato:
 
 ```
@@ -73,6 +73,7 @@ Source files:  <N> files analyzed | ~<LOC> lines of code
 DB tables:     <tabelas>
 Endpoints:     <N> endpoints (<lista curta METHOD path>)
 Baseline:      <N/N endpoints responderam | motivo se não foi possível subir>
+Probes:        <N sondas executadas — V vulneráveis>
 Run command:   <comando atual para subir a aplicação>
 ================================
 ```
@@ -88,10 +89,11 @@ Leia `references/anti-patterns-catalog.md` e `references/report-template.md`.
 1. Percorra o catálogo **inteiro**, anti-pattern por anti-pattern, aplicando os sinais de detecção em todos os arquivos-fonte. Inclua a seção de **APIs deprecated**: compare o que o código usa com as versões instaladas e indique o equivalente moderno.
 2. Para cada ocorrência, confirme arquivo e linha(s) no código e compare com a tabela **"Falsos positivos comuns"** do catálogo: se o trecho se encaixa na coluna "Não é finding", descarte. Agrupe ocorrências do mesmo problema num único finding, listando todas as linhas.
 3. Classifique a severidade conforme o catálogo. Use o contexto para subir ou descer um nível quando o catálogo indicar (ex.: endpoint administrativo sem autenticação que executa SQL é CRITICAL, não HIGH).
-4. Não invente findings para bater uma cota. Em compensação, **não pare no óbvio**: um projeto já dividido em pastas ainda pode ter rotas gordas, camadas mortas, validação duplicada e APIs deprecated.
-5. Gere o relatório **exatamente** no formato de `references/report-template.md`, com os findings ordenados de CRITICAL a LOW.
-6. Salve o relatório em `reports/audit-report.md` dentro do projeto (crie a pasta se preciso) e imprima o relatório completo na conversa.
-7. Termine a fase com esta pergunta e **pare**, aguardando a resposta do usuário:
+4. **Cruze com a evidência de execução.** Releia a linha de base e as sondas: todo comportamento anômalo (sonda VULNERÁVEL, sucesso sem efeito, processo que caiu, dado sensível na resposta ou no log) precisa estar coberto por um finding. Se nenhum finding explica uma sonda vulnerável, volte ao código, encontre a causa (arquivo:linha) e registre o finding com `Evidence:` apontando a sonda.
+5. Não invente findings para bater uma cota. Em compensação, **não pare no óbvio**: um projeto já dividido em pastas ainda pode ter rotas gordas, camadas mortas, validação duplicada e APIs deprecated.
+6. Gere o relatório **exatamente** no formato de `references/report-template.md`, com os findings ordenados de CRITICAL a LOW.
+7. Salve o relatório em `reports/audit-report.md` dentro do projeto (crie a pasta se preciso) e imprima o relatório completo na conversa.
+8. Termine a fase com esta pergunta e **pare**, aguardando a resposta do usuário:
 
 ```
 Phase 2 complete. Report saved to reports/audit-report.md.
@@ -123,9 +125,10 @@ Leia `references/mvc-guidelines.md` e `references/refactoring-playbook.md`.
    - instale as dependências;
    - suba a aplicação numa porta livre e confirme que ela inicia sem erros nem warnings novos;
    - repita as requisições da linha de base e compare status e formato de cada resposta;
+   - **repita todas as sondas**: cada sonda que era VULNERÁVEL precisa estar OK;
    - faça uma nova varredura rápida com o catálogo para confirmar que os findings CRITICAL e HIGH foram resolvidos;
    - salve o resultado em `reports/validation-results.md`.
-6. Se algo falhar, corrija e valide de novo (até 3 ciclos). Se ainda houver falhas, relate-as com honestidade no resumo.
+6. Se algo falhar, corrija e valide de novo (até 3 ciclos). **Priorize as sondas que continuam vulneráveis**: elas são o sinal mais direto de que um finding não foi resolvido. Se ainda houver falhas, relate-as com honestidade no resumo, em "Unresolved".
 7. Encerre a aplicação e remova os artefatos temporários de validação.
 8. Imprima o resumo final:
 
@@ -141,11 +144,15 @@ PHASE 3: REFACTORING COMPLETE
 <findings não resolvidos, com o motivo>
 
 ## Contract changes
-<mudanças intencionais de contrato (só segurança) — ou "None">
+<mudanças intencionais de contrato (segurança ou status que mentiam) — ou "None">
+
+## Unresolved
+<sondas ainda vulneráveis e findings não resolvidos, com o motivo — ou "None">
 
 ## Validation
   ✓/✗ Application boots without errors (<comando e porta>)
   ✓/✗ All endpoints respond correctly (<N/N iguais à linha de base>)
+  ✓/✗ Security probes blocked (<V/V que eram vulneráveis agora OK>)
   ✓/✗ No CRITICAL/HIGH anti-patterns remaining
   ✓/✗ Run command unchanged (<comando>)
 ================================

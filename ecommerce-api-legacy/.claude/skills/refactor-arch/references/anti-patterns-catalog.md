@@ -98,8 +98,10 @@ grep -rnE "(SELECT|INSERT|UPDATE|DELETE)[^\"']*[\"']\s*\+|f[\"'](SELECT|INSERT|U
 - Rotas administrativas (`/admin/*`, `reset`, `query`, `report`, `delete`) sem verificação de identidade ou papel.
 - Login que não emite token/sessão, ou token previsível (ex.: prefixo fixo + id do usuário) que nenhuma rota valida.
 - Campo `role`/`tipo` aceito do cliente na criação de usuário, permitindo criar administradores.
+- **Identidade não verificada no fluxo:** o código localiza uma conta existente por um identificador enviado pelo cliente (e-mail, documento, username) e segue executando a ação em nome dela sem conferir a credencial (ex.: `if (existing) { accountId = existing.id } else { create(...) }` sem comparar a senha/token). Procure todo ponto em que um lookup por identificador do request decide "de quem" é a operação.
+- Comparação de credencial que pode ser pulada (senha opcional, `if password and ...`, comparação só no ramo de criação).
 
-**Ajuste:** HIGH quando a rota só lê dados não sensíveis; CRITICAL quando destrói dados, executa comandos ou expõe dados pessoais/financeiros.
+**Ajuste:** HIGH quando a rota só lê dados não sensíveis; CRITICAL quando destrói dados, executa comandos, expõe dados pessoais/financeiros ou permite agir (comprar, cobrar, alterar) em nome de outra conta.
 **Por que importa:** qualquer pessoa apaga dados ou lê informações restritas.
 
 ### AP-07 — Debug ou config de desenvolvimento em produção
@@ -305,7 +307,7 @@ Antes de registrar um finding, confira se o trecho não é um destes casos. Um r
 | AP-03 | `return {"id": u.id, "hash": u.password_hash}` na resposta | Receber `password` no corpo de um cadastro; ler o hash dentro do model para verificar o login |
 | AP-04 | `hashlib.sha256(pwd.encode()).hexdigest()` para guardar senha | `sha256` para checksum de arquivo, ETag ou chave de cache |
 | AP-05 | `library.py` com conexão, `CREATE TABLE`, rotas e cálculo de multa | O entry point/composition root que importa e registra todas as camadas: esse é o papel dele |
-| AP-06 | `DELETE /admin/purge` sem nenhuma verificação | `GET /health` ou `GET /` públicos sem dados sensíveis |
+| AP-06 | `DELETE /admin/purge` sem nenhuma verificação; reutilizar a conta de um e-mail existente sem checar a senha | `GET /health` ou `GET /` públicos sem dados sensíveis; lookup por e-mail num fluxo de "esqueci a senha" que só envia um link |
 | AP-07 | `app.run(debug=True, host="0.0.0.0")` fixo | `debug=settings.DEBUG` lido do ambiente com padrão `False` |
 | AP-08 | Handler de 40 linhas com SQL, cálculo de multa e montagem do JSON | Handler de 5 linhas que lê o body, chama o controller e devolve o resultado |
 | AP-10 | `cache = {}` de módulo mutado por várias funções; `global conn` | Constantes de módulo (`MAX_ITEMS = 50`); extensões criadas uma vez e inicializadas na app (`db = SQLAlchemy()`, `logger = logging.getLogger(__name__)`) |

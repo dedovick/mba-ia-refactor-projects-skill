@@ -11,8 +11,11 @@ O relatório é impresso na conversa **e** salvo em `reports/audit-report.md`. U
 - `Impact:` a consequência concreta (o que pode acontecer), não uma repetição da descrição.
 - `Recommendation:` a correção, citando a transformação do playbook (`T-xx`).
 - `Catalog:` o ID do anti-pattern (`AP-xx`).
+- `Evidence:` *(quando houver)* a requisição da linha de base ou a sonda que demonstra o problema em execução (`baseline #6`, `probe P2`). Todo finding que nasceu de uma sonda VULNERÁVEL precisa desse campo.
 - Findings de APIs deprecated levam `[DEPRECATED]` no título e o equivalente moderno na recomendação.
 - Os números do `Summary` precisam bater com a lista de findings.
+- Toda sonda VULNERÁVEL da linha de base precisa aparecer em `Evidence:` de algum finding; a linha `Probes` do Summary confirma isso.
+- A estrutura proposta em `Architecture Overview → Target` usa **os mesmos nomes de pastas** de `mvc-guidelines.md` (ex.: `views/`, não `routes/`).
 
 ## Estrutura
 
@@ -33,6 +36,7 @@ Date:    <AAAA-MM-DD>
 ## Summary
 
 CRITICAL: <n> | HIGH: <n> | MEDIUM: <n> | LOW: <n>
+Probes: <V> vulneráveis de <N> executadas — todas cobertas por findings (<ids>)
 
 | Severity | Count | Findings |
 |---|---|---|
@@ -46,6 +50,7 @@ CRITICAL: <n> | HIGH: <n> | MEDIUM: <n> | LOW: <n>
 ### F-01 [CRITICAL] <título curto>
 File: <arquivo>:<linha(s)>
 Catalog: AP-xx
+Evidence: <baseline #n / probe Pn — opcional>
 Description: <o que está errado, com um trecho do código>
 Impact: <consequência concreta>
 Recommendation: <correção> (T-xx)
@@ -65,7 +70,7 @@ Recommendation: <correção> (T-xx)
 ## Architecture Overview
 
 - **Current:** <classificação da Fase 1 e o principal motivo>
-- **Target:** <estrutura MVC proposta, em uma ou duas linhas>
+- **Target:** <estrutura MVC proposta, em uma ou duas linhas, com os nomes de pastas de `mvc-guidelines.md`>
 
 ```
 ================================

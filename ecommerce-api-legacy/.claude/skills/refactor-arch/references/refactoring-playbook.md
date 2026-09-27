@@ -288,6 +288,23 @@ function verifyPassword(password, stored) {
 
 Atualize o seed para gravar hashes e verifique que o login com as credenciais do seed continua funcionando. Remova senhas padrão (`password || "123456"`): senha ausente é erro de validação.
 
+**Conta existente reutilizada num fluxo (AP-06, identidade não verificada)**
+
+```js
+// Antes: quem informar um e-mail já cadastrado age em nome daquela conta
+const existing = await accountModel.findByEmail(input.email);
+const accountId = existing ? existing.id : await accountModel.create(input);
+
+// Depois: a conta existente só é usada com a credencial correta
+const existing = await accountModel.findByEmail(input.email);
+if (existing && !verifyPassword(input.password ?? "", existing.passwordHash)) {
+  throw new AppError("Credenciais inválidas", 401);     // nada é gravado
+}
+const accountId = existing ? existing.id : await accountModel.create(input);
+```
+
+Faça a verificação **antes** de qualquer efeito colateral (cobrança, gravação). A resposta nova (401) é uma correção de segurança: liste-a em "Contract changes".
+
 ---
 
 ## T-07 — Presenter com whitelist e logs sem dados sensíveis
